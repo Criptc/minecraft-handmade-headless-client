@@ -1,3 +1,5 @@
+import struct
+
 # packet data, unpacking, packing, and simplifier (for debugging)
 # obviously not done
 
@@ -5,8 +7,15 @@
 format:
 ClientBound or ServerBound (to client or to server)
 id number (in hex because that's how it is in https://wiki.vg
-
 """
+
+def EXAMPLEdecode0x01(packet): # might change when finished
+    data = struct.unpack('idddh', packet)
+    print(f"""in: 0x01: "Spawn XP orb"
+Entity ID: {data[0]}
+Cords: X: {data[1]} Y {data[2]} Z {data[3]}
+Amount of XP {data[4]}""")
+    return None # will not display anything so we dont need to return anything
 
 packets = {
     "ClientBound": {
@@ -20,7 +29,8 @@ packets = {
             "Name": "Spawn XP Orb",
             "Description": "Spawns one or more XP orbs",
             "Order": ['varint', 'double', 'double', 'double', 'short'],
-            "Order Description": ['Entity ID', 'entity X', 'entity Y', 'entity Z', 'XP rewarded when collected']
+            "Order Description": ['Entity ID', 'entity X', 'entity Y', 'entity Z', 'XP rewarded when collected'],
+            "Decode": EXAMPLEdecode0x01 # fix with working non example
         },
         0x02: {
             "Name": "Spawn Living Entity",
@@ -51,6 +61,9 @@ packets = {
             "Description": "sent when an entity changes animation",
             "Order": ['varint', 'unsigned byte'],
             "Order Description": ['Entity ID', 'Animation ID (0 swing main arm, 1 Take dmg, 2 Leave bed, 3 Swing offhand, 4 Crit effect, 5 magic crit effect)']
-        }
+        } # keep going
+    },
+    "ServerBound": {
+        # add packets
     }
 }
