@@ -1,7 +1,7 @@
 import struct
 
 # packet data, unpacking, packing, and simplifier (for debugging)
-# obviously not done
+# obviously non are done
 
 """
 format:
