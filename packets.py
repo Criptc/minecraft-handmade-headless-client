@@ -1,7 +1,7 @@
 import struct
 
 # packet data, unpacking, packing, and simplifier (for debugging)
-# obviously non are done
+# obviously not done
 
 """
 format:
@@ -19,6 +19,14 @@ Cords: X: {data[1]} Y: {data[2]} Z: {data{3}}
 Amount of XP: {data[4]}
 """)
     return None  # will not display so we dont need to return anything
+
+types = {  # None means add later
+    "uuid": None,
+    "angle": None,
+    "title": None,
+    "slot": None,
+    "chat": "json"  # chat is just a certian format of json
+}
 
 packets = {
     "ClientBound": {
@@ -94,11 +102,75 @@ packets = {
             "Description": "block actions and animations",
             "Order": ['postion', 'unsigned byte', 'unsigned byte', 'varint'],
             "Order Description": ['Block Cordients', 'Varries on block', 'varries on block', 'block type ID']
+        },
+        0x0C: {
+            "Name": "Block Change",
+            "Description": "send when a block is changed withen view distance",
+            "Order": ['postion', 'varint'],
+            "Order Description": ['location of the block that gets changed', 'The new block state ID ']
+        },
+        0x0D: {
+            "Name": "Boss Bar",
+            "Description": "shows a boss bar",
+            "Order": ['uuid', 'varint', {0: [types['chat'], 'float', 'varint', 'varint', 'unsigned byte'], 1: None, 2: 'float', 3: types['chat'], 4: ['varint', 'varint'], 5: 'unsigned byte'}],
+            "Order Description": ['UUID for the bar', 'Layout of next section', {0: ['title of the boss bar', 'color ID', 'Type of division', 'Bitmask (aka flags)'], 1: 'removes the boss bare', 2: 'updates the heath to number', 3: 'update title', 4: ['Color ID', 'Dividers'], 5: 'update flags'}]
+        },
+        0x0E: {
+            "Name": "Server Difficulty",
+            "Description": "changes the clients difficulty setting in the option menu",
+            "Order": ['unsigned byte', 'bool'],
+            "Order Description": [{0: 'peaceful', 1: 'easy', 2: 'normal', 3: 'hard'}, 'is the difficulty locked']
+        },
+        0x0F: {
+            "Name": "Chat message",
+            "Description": "sent to display a chat message",
+            "Order": [types['chat'], 'byte', 'uuid'],
+            "Order Description": ['chat message to display', {0: 'normal message (chat box)', 1: 'system message (chat box)', 2: 'game info (above chat bar)'}, 'uuid of sender (?)']
+        },
+        0x10: {
+            "Name": "Clear titles",
+            "Description": "clears current title info with option to reset it",
+            "Order": ['bool'],
+            "Order Description": ['weather to reset title info (true) or just remove it (false)']
+        },
+        0x11: {
+            "Name": "Tab-Complete",
+            "Description": "list of auto completes for command names, perameters, and usernames",
+            "Order": ['varint', 'varint', 'varint', 'varint', 'string', 'bool', types['chat']],
+            "Order Description": ['Transaction ID', 'Start of text to replace', 'end of text to replace', 'number of eliments in fallowing array (string?)', 'string', 'True if fallowing is present else, false', 'tool tip to display']
+        },
+        0x12: {
+            "Name": "Delcare Commands",
+            "Description": "list of commands on the server and how they are parsed",
+            "Order": ['varint', 'nodes (?)', 'varint'],
+            "Order Description": ['number of elements in fallowing array', 'array of nodes', 'index of root node in prevous array']
+        },
+        0x13: {
+            "Name": "Close Window",
+            "Description": "sent when a window is force closed",
+            "Order": ['unsigned byte'],
+            "Order Description": ['id of window closed']
+        },
+        0x14: {
+            "Name": "Window Items",
+            "Description": "sent when multiple window items are removed or added including armors",
+            "Order": ['unsigned byte', 'varint', 'varint', 'array of slot(?)', 'slot(?)'],
+            "Order Description": ['ID of window changing', 'State ID', 'num of elements in fallowing array', 'array of slots(?)', 'item held by player']
+        },
+        0x15: {
+            "Name": "Window Property",
+            "Description": "sent when part of a gui window should change (or update)",
+            "Order": ['unsigned byte', 'short', 'short'],
+            "Order Description": ['Window ID', 'Property to be updated', 'new value for the property']
+        },
+        0x16: {
+            "Name": "Set Slot",
+            "Description": "sent when a single item is removed or added to a slot in a window",
+            "Order": ['byte', 'varint', 'short', 'slot(?)'],
+            "Order Description": ['window being updated', 'state ID', 'slot to be updated', 'slot data']
         }
     }, # add more packets
     "SeverBound": {
         # add  packets
-        }
     }
 }
-
