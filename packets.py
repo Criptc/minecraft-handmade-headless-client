@@ -7,6 +7,12 @@ import struct
 format:
 ClientBound or ServerBound (to client or to server)
 id number (in hex because that's how it is in https://wiki.vg
+
+Todo:
+get ClientBound to atleace 0x69 (farthes packet I think)
+add packets to ServerBound
+add decoders
+more comments
 """
 
 def EXAMPLEdecode0x01(packet): # might change when finished
