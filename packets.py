@@ -8,20 +8,17 @@ format:
 ClientBound or ServerBound (to client or to server)
 id number (in hex because that's how it is in https://wiki.vg
 
-Todo:
-get ClientBound to atleace 0x69 (farthes packet I think)
-add packets to ServerBound
-add decoders
-more comments
+ 
 """
 
-def EXAMPLEdecode0x01(packet): # might change when finished
-    data = struct.unpack('idddh', packet)
-    print(f"""in: 0x01: "Spawn XP orb"
+def EXAMPLEdecode0x01(packet):  # this might not be what its like when finished
+    data = struct.unpack('idddh', packet) # 
+    print(f"""in: 0x01: "Spawn XP Orb"
 Entity ID: {data[0]}
-Cords: X: {data[1]} Y {data[2]} Z {data[3]}
-Amount of XP {data[4]}""")
-    return None # will not display anything so we dont need to return anything
+Cords: X: {data[1]} Y: {data[2]} Z: {data{3}}
+Amount of XP: {data[4]}
+""")
+    return None  # will not display so we dont need to return anything
 
 packets = {
     "ClientBound": {
@@ -36,7 +33,7 @@ packets = {
             "Description": "Spawns one or more XP orbs",
             "Order": ['varint', 'double', 'double', 'double', 'short'],
             "Order Description": ['Entity ID', 'entity X', 'entity Y', 'entity Z', 'XP rewarded when collected'],
-            "Decode": EXAMPLEdecode0x01 # fix with working non example
+            "Decode": EXAMPLEdecode0x01  # fix with non example
         },
         0x02: {
             "Name": "Spawn Living Entity",
@@ -67,9 +64,41 @@ packets = {
             "Description": "sent when an entity changes animation",
             "Order": ['varint', 'unsigned byte'],
             "Order Description": ['Entity ID', 'Animation ID (0 swing main arm, 1 Take dmg, 2 Leave bed, 3 Swing offhand, 4 Crit effect, 5 magic crit effect)']
-        } # keep going
-    },
-    "ServerBound": {
-        # add packets
+        },
+        0x07: {
+            "Name": "Statistics",
+            "Description": "Response to ServerBound 0x04 'Client status'",
+            "Order": ['varint', ['varint', 'varint', 'varint']],  # a sub list means an array that contains the types
+            "Order Description": ['number of elements in fallowing array', ['varries', 'varries', 'value to set to']]
+        },
+        0x08: {
+            "Name": "Acknowledge Player Digging",
+            "Descripton": "confims that the player is digging",
+            "Order": ['postion', 'varint', 'varint', 'bool'],
+            "Order Description": ['postion of digging', 'block state ID of the block that should be at the postion of digging', '0 Started digging, 1 Cancelled digging, 2 finished digging']
+        },
+        0x09: {
+            "Name": "Block Break Animation",
+            "Descripton": "Destroy stages of a block getting dug",
+            "Order": ['varint', 'postion', 'byte'],
+            "Order Description": ['Entity ID', 'Postion where to display', 'Destroy stage 0-9, any other removes it']
+        },
+        0x0A: {
+            "Name": "Block Entity Data",
+            "Description": "Sets block entity associated with block at given location",
+            "Order": ['postion', 'varint', 'NBT'],
+            "Order Description": ['location of block', 'type of block entity', 'Data to set (as NBT tag)']
+        },
+        0x0B: {
+            "Name": "Block Action",
+            "Description": "block actions and animations",
+            "Order": ['postion', 'unsigned byte', 'unsigned byte', 'varint'],
+            "Order Description": ['Block Cordients', 'Varries on block', 'varries on block', 'block type ID']
+        }
+    }, # add more packets
+    "SeverBound": {
+        # add  packets
+        }
     }
 }
+
