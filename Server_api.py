@@ -110,7 +110,7 @@ class Server:
         else:
             return byte
 
-    def login(self, quiet=True):
+    def offline_login(self, quiet=True):
         if quiet != self.quiet:
             self.quiet = quiet
 
