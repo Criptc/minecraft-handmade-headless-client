@@ -7,6 +7,9 @@ import time
 # will use when packet sending added
 # import zlib
 
+# will use when online mode is added (please add if you have free time [i dont have internet on my desktop])
+# import rsa
+
 
 class Server:
     def __init__(self, host='localhost', port=25565, username='', timeout=5, quiet=True):
