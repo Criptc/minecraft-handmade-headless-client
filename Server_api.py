@@ -19,7 +19,6 @@ class Server:
         self._username = username
         self._timeout = timeout
         self.quiet = quiet
-        self.play = False  # this should never start in True for a normal login
         self.decode_packet_login = packet["decode"]["login"]
         self.decode_packet = packet["decode"]["play"]
         self.encode_packet = packet["encode"]
@@ -149,8 +148,6 @@ class Server:
             login_suc_bytes = self.read_fully(connection)
             login_uuid, login_username, login_suc_bytes = self.decode_packet_login[0x02](login_suc_bytes)
             print(f"login success: \n\tuuid:{login_uuid}\n\tusername: {login_username}\n\textra:{login_suc_bytes}\n")  # Login success
-
-            self.play = True  # activate play mode
 
             play_user_id, play_hardcore, gamemode, prevous_gamemode, num_in_next, rest_of_data = self.decode_packet[0x26](self.read_fully(connection))
             if gamemode == b'\x00':
