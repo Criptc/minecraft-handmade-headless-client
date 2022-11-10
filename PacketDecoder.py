@@ -57,17 +57,20 @@ class _Packets:
                 out.append(i)
             rest = data_packet[7:len(data_packet)]
             dimention = _static_unpack_varint(rest)
-            rest = [1:len(rest)]
+            rest = rest[1:len(rest)]
             dimentions = []
             
-            for i in dimention:
+            for i in range(dimention):
                 length = _static_unpack_varint(rest)
                 mid = ''
                 data = struct.unpack_from('c' + 'c'*length, rest)
+                data = data[1:len(data)]
                 for i in data:
                     mid += i.decode()
+                    
                 dimentions.append(mid)
                 rest = rest[length+1:len(rest)]
+                
             out.append(dimentions)
             out.append(rest[0:len(rest)])
             return out
