@@ -13,7 +13,7 @@ from PacketDecoder import packet
 
 class Server:
     def __init__(self, host='localhost', port=25565, username='', timeout=5, quiet=True):
-        # Init the hostname, port, timeout and username (username not needed yet)
+        # Init the hostname, port, timeout, username, etc
         self._host = host
         self._port = port
         self._username = username
@@ -126,7 +126,7 @@ class Server:
         1: login start              out     gives username
         maby 2: Set Compression     in      max size before a outgoing packet must be compressed (zlib)
         maby 2: Login success       in      ADD DESCRIPTION
-        3: login play               in      ADD DESCRIPTION
+        3: login (play)             in      ADD DESCRIPTION
         4: custom payload           in      ADD DESCRIPTION
         5: ADD
         """
@@ -150,6 +150,7 @@ class Server:
             print(f"login success: \n\tuuid:{login_uuid}\n\tusername: {login_username}\n\textra:{login_suc_bytes}\n")  # Login success
 
             play_user_id, play_hardcore, gamemode, prevous_gamemode, num_in_next, rest_of_data = self.decode_packet[0x26](self.read_fully(connection))
+            
             if gamemode == b'\x00':
                 gamemode = "survival"
             elif gamemode == b'\x01':
@@ -159,12 +160,15 @@ class Server:
             elif gamemode == b'\x03':
                 gamemode = "spectator"
 
-            print(f"login (play): \n\tplayer EID: {play_user_id}\n\thardcore: {play_hardcore}\n\tgamemode: {gamemode}\n\tprevious gamemode: {prevous_gamemode}\n\tnumber of values in fallowing list: {num_in_next}")  # Login (play)  # please add to PaketDecoder.py as its massive and I want to get all small packets first
-            print(f"Custom payload: \n\tserver flavor: {self.decode_packet['custom payload'](self.read_fully(connection))}")  # custom payload only works on non-pure vanilla servers
-            print(f"something: {self.read_fully(connection)}")  # something
-            print(f"extra: {rest_of_data}")
+            # find out why prevous_gamemode is allways b'\xFF' and what it means
 
-    def get_status(self, quiet=True):  # Gets a minecraft servers status
+            print(f"login (play): \n\tplayer EID: {play_user_id}\n\thardcore: {play_hardcore}\n\tgamemode: {gamemode}\n\tprevious gamemode: {prevous_gamemode}\n\tnumber of values in fallowing list: {num_in_next}")  # Login (play), still wip as its massive
+            
+            print(f"Custom payload: \n\tserver flavor: {self.decode_packet['custom payload'](self.read_fully(connection))}")  # custom payload, might only work on non-pure vanilla servers
+            print(f"something: {self.read_fully(connection)}")  # don't know yet
+            print(f"extra: {rest_of_data}")  # the rest of the login (play) packet for debugging
+
+    def get_status(self, quiet=True):  # Gets a minecraft servers status, is fully compleated
         if quiet != self.quiet:
             self.quiet = quiet
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
