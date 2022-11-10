@@ -55,9 +55,21 @@ class _Packets:
             data = struct.unpack_from('i?cc', data_packet)
             for i in data:
                 out.append(i)
-            rest = data_packet[8:len(data_packet)]
-            out.append(_static_unpack_varint(rest))
-            out.append(rest[1:len(rest)])
+            rest = data_packet[7:len(data_packet)]
+            dimention = _static_unpack_varint(rest)
+            rest = [1:len(rest)]
+            dimentions = []
+            
+            for i in dimention:
+                length = _static_unpack_varint(rest)
+                mid = ''
+                data = struct.unpack_from('c' + 'c'*length, rest)
+                for i in data:
+                    mid += i.decode()
+                dimentions.append(mid)
+                rest = rest[length+1:len(rest)]
+            out.append(dimentions)
+            out.append(rest[0:len(rest)])
             return out
 
     class Special:
