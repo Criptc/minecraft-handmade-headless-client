@@ -149,7 +149,7 @@ class Server:
             login_uuid, login_username, login_suc_bytes = self.decode_packet_login[0x02](login_suc_bytes)
             print(f"login success: \n\tuuid:{login_uuid}\n\tusername: {login_username}\n\textra:{login_suc_bytes}\n")  # Login success
 
-            play_user_id, play_hardcore, gamemode, prevous_gamemode, num_in_next, rest_of_data = self.decode_packet[0x26](self.read_fully(connection))
+            play_user_id, play_hardcore, gamemode, prevous_gamemode, dimentions, rest_of_data = self.decode_packet[0x26](self.read_fully(connection)) # find out why prevous_gamemode is allways b'\xFF' and what it means
             
             if gamemode == b'\x00':
                 gamemode = "survival"
@@ -160,13 +160,10 @@ class Server:
             elif gamemode == b'\x03':
                 gamemode = "spectator"
 
-            # find out why prevous_gamemode is allways b'\xFF' and what it means
-
-            print(f"login (play): \n\tplayer EID: {play_user_id}\n\thardcore: {play_hardcore}\n\tgamemode: {gamemode}\n\tprevious gamemode: {prevous_gamemode}\n\tnumber of values in fallowing list: {num_in_next}")  # Login (play), still wip as its massive
+            print(f"login (play): \n\tplayer EID: {play_user_id}\n\thardcore: {play_hardcore}\n\tgamemode: {gamemode}\n\tprevious gamemode: {prevous_gamemode}\n\tdimentions: {dimentions}\nextra/not unpacked: {rest_of_data}")  # Login (play), still wip as its massive
             
             print(f"Custom payload: \n\tserver flavor: {self.decode_packet['custom payload'](self.read_fully(connection))}")  # custom payload, might only work on non-pure vanilla servers
             print(f"something: {self.read_fully(connection)}")  # don't know yet
-            print(f"extra: {rest_of_data}")  # the rest of the login (play) packet for debugging
 
     def get_status(self, quiet=True):  # Gets a minecraft servers status, is fully compleated
         if quiet != self.quiet:
