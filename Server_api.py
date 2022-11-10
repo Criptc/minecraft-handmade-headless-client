@@ -3,11 +3,11 @@ import socket
 import struct
 import json
 import time
+import zlib
+from PacketDecoder import packet
 
-# will use when packet sending added
-# import zlib
 
-# will use when online mode is added (please add if you have free time [i dont have internet on my desktop])
+# will use when online mode is added (please add if you have free time [I don't have internet on my desktop, so I can't])
 # import rsa
 
 
@@ -19,6 +19,10 @@ class Server:
         self._username = username
         self._timeout = timeout
         self.quiet = quiet
+        self.play = False  # this should never start in True for a normal login
+        self.decode_packet_login = packet["decode"]["login"]
+        self.decode_packet = packet["decode"]["play"]
+        self.encode_packet = packet["encode"]
 
     @staticmethod
     def _unpack_varint(sock):  # Unpacks a varint
@@ -83,9 +87,10 @@ class Server:
 
     def read_fully(self, connection, extra_varint=False, return_id=False):  # Read the connection and return the bytes
         packet_length = self._unpack_varint(connection)
-        print(packet_length)
         packet_id = self._unpack_varint(connection)
-        print(hex(packet_id))
+        if not self.quiet:
+            print(f"\n{packet_length}")
+            print(hex(packet_id))
         byte = b''
 
         if extra_varint:
@@ -104,15 +109,28 @@ class Server:
         if byte != b'':
             if not self.quiet:
                 print(f'in\t{byte}')
-        if return_id:
-            print(hex(packet_id))
-            return byte
-        else:
+
+        try:
+            return zlib.decompress(byte)
+        except:
             return byte
 
-    def offline_login(self, quiet=True):
+    def offline_login(self, version="1.18.2", quiet=True):
         if quiet != self.quiet:
             self.quiet = quiet
+
+        if self._username == '':
+            raise ValueError("Username can't be blank when logging in")
+
+        """
+        0: handshake                out     starts connection and gives connection data
+        1: login start              out     gives username
+        maby 2: Set Compression     in      max size before a outgoing packet must be compressed (zlib)
+        maby 2: Login success       in      ADD DESCRIPTION
+        3: login play               in      ADD DESCRIPTION
+        4: custom payload           in      ADD DESCRIPTION
+        5: ADD
+        """
 
         # start socket, set the timeout and connect to the minecraft server
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
@@ -120,15 +138,34 @@ class Server:
             connection.connect((self._host, self._port))
 
             # handshake and setup login
-            self.send_data(connection, b'\x00', 1526, socket.gethostname(), self._port, b'\x02')  # handshake
+            if version == "1.18.2":  # 1.18.2
+                self.send_data(connection, b'\x00', 1526, socket.gethostname(), self._port, b'\x02')  # handshake, 1526 is 1.18.2's raw protocol number, should be able to change to 1.19.2's easily due to no packet changes (just blocks and mobs)
+            elif version == "1.19.2":  # 1.19.2
+                self.send_data(connection, b'\x00', 1528, socket.gethostname(), self._port, b'\x02')
             self.send_data(connection, b'\x00', self._username)  # login
-            self.read_fully(connection)  # max packet length until compression
-            print('\n')
-            # unknown
-            self.read_fully(connection)
-            print('\n')
-            self.read_fully(connection, extra_varint=True)
-            print('\n')
+
+            # max length before compression doesn't seem to work here
+
+            login_suc_bytes = self.read_fully(connection)
+            login_uuid, login_username, login_suc_bytes = self.decode_packet_login[0x02](login_suc_bytes)
+            print(f"login success: \n\tuuid:{login_uuid}\n\tusername: {login_username}\n\textra:{login_suc_bytes}\n")  # Login success
+
+            self.play = True  # activate play mode
+
+            play_user_id, play_hardcore, gamemode, prevous_gamemode, num_in_next, rest_of_data = self.decode_packet[0x26](self.read_fully(connection))
+            if gamemode == b'\x00':
+                gamemode = "survival"
+            elif gamemode == b'\x01':
+                gamemode = "creative"
+            elif gamemode == b'\x02':
+                gamemode = "adventure"
+            elif gamemode == b'\x03':
+                gamemode = "spectator"
+
+            print(f"login (play): \n\tplayer EID: {play_user_id}\n\thardcore: {play_hardcore}\n\tgamemode: {gamemode}\n\tprevious gamemode: {prevous_gamemode}\n\tnumber of values in fallowing list: {num_in_next}")  # Login (play)  # please add to PaketDecoder.py as its massive and I want to get all small packets first
+            print(f"Custom payload: \n\tserver flavor: {self.decode_packet['custom payload'](self.read_fully(connection))}")  # custom payload only works on non-pure vanilla servers
+            print(f"something: {self.read_fully(connection)}")  # something
+            print(f"extra: {rest_of_data}")
 
     def get_status(self, quiet=True):  # Gets a minecraft servers status
         if quiet != self.quiet:
@@ -139,7 +176,7 @@ class Server:
 
             # Send handshake + status request
             self.send_data(connection, b'\x00\x00', self._host, self._port, b'\x01')  # b'\x01' means get status and ignore version
-            self.send_data(connection, b'\x00') # empty packet
+            self.send_data(connection, b'\x00')  # empty packet
 
             # Read response, offset for string length
             data = self.read_fully(connection, extra_varint=True)
@@ -156,7 +193,7 @@ class Server:
 
 
 if '__main__' == __name__:
-    stat = Server('192.168.56.1', quiet=True)
+    stat = Server('192.168.56.1', port=55556, quiet=True, username="PythonClient")
     print(stat.get_status())
     print('\n')
-    stat.login(quiet=False)
+    stat.offline_login()
