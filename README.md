@@ -5,4 +5,5 @@ A minecraft client that I hand made, still WIP and only .get_status() is working
 <br/>main file is Server_api.py
 <br/>For: 1.18.2 java (no others tested)
 <br/>Todo: 
-<br/>&emsp;work on login (play) packet, add 1.19.2 mode, make online_login
+<br/>&emsp;make online_login
+<br/>&emsp;test and fix honeypot
