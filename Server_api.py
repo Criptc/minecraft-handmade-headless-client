@@ -198,9 +198,12 @@ class Server:
             server.bind((serveraddr, serverport))
             server.listen(10)
             working = True
+            print("started honeypot")
             while working:
                 try:
                     client, addr = server.accept()
+
+                    print(f"{addr} connected")
             
                     version, is_ping = _Packets.client.handshake(self.read_fully(client))
             
