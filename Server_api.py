@@ -242,7 +242,7 @@ class Server:
                             # skipping encryption request, idk how to work mc's auth servers, but maby you can add this
                             
                             # skipping compression, because we only need to send one more packet and don't start Play mode
-                            client.send((_Packets.client.disconnect("Invalid encryption response!"))
+                            client.send(_Packets.client.disconnect("Invalid encryption response!"))
                             print(f"{addr}: disconnected\n")
                             client.close()
                 except KeyboardInterrupt: 
