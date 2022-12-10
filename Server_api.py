@@ -22,6 +22,7 @@ class Server:
         self._host = host
         self._port = port
         self._username = username
+        self._timeout = timeout
         self.quiet = quiet
         self.decode_packet_login = packet["decode"]["login"]
         self.decode_packet = packet["decode"]["play"]
