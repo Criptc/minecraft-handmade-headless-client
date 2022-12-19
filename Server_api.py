@@ -127,13 +127,27 @@ class Server:
             raise ValueError("Username can't be blank when logging in")
 
         """
-        0: handshake                out     starts connection and gives connection data
-        1: login start              out     gives username
-        maby 2: Set Compression     in      max size before a outgoing packet must be compressed (zlib)
-        maby 2: Login success       in      ADD DESCRIPTION
-        3: login (play)             in      ADD DESCRIPTION
-        4: custom payload           in      ADD DESCRIPTION
-        5: ADD MORE PACKETS
+        0:  Handshake                            out     starts connection and gives connection data
+        1:  Login start                          out     sends username
+        2:  Set Compression (optinal)            in      max size before a outgoing packet must be compressed (zlib)
+        3:  Login success/forge detection        in      gives data about the user after the login has succeded
+        4:  Login (play)                         in      gives data about the user's entity, dimentions, gamemodes, etc
+        5:  Server custom payload (Optional)     in      tells server flavor, like paper or bukkit
+        6:  Change Difficulty (optinal)          in      ADD DISCRIPTON
+        7:  Player Abilities (optional)          in      ADD DISCRIPTON
+        8:  Client custom payload (optional)     out     ADD DISCRIPTON
+        9:  Client Information (clarify)         out     ADD DISCRIPTON
+        10: Set Held Item                        in      ADD DISCRIPTON
+        11: Update Recipes (clarify)             in      ADD DISCRIPTON
+        12: Update Tags (clearify)               in      ADD DISCRIPTON
+        13: Entity Event (clearify)              in      ADD DISCRIPTON
+        14: Commands                             in      ADD DISCRIPTON
+        15:
+        16:
+        17:
+        18:
+        19:
+        20:
         """
 
         # start socket, set the timeout and connect to the minecraft server
@@ -151,9 +165,15 @@ class Server:
             # max length before compression doesn't seem to work here
 
             login_suc_bytes = self.read_fully(connection)
+            
+            if b"This server has mods that require Forge to be installed on the client. Contact your server admin for more details." in login_suc_bytes:
+                print("Server has forge enabled, which I have to either find a way to spoof it and ignore the mods, or, find a way to add mods")
+                return
+                
             login_uuid, login_username, login_suc_bytes = self.decode_packet_login[0x02](login_suc_bytes)
             print(f"login success: \n\tuuid:{login_uuid}\n\tusername: {login_username}\n\textra:{login_suc_bytes}\n")  # Login success
 
+            # find way to catch the error that comes from here when hitting a forge enabled srever
             play_user_id, play_hardcore, gamemode, prevous_gamemode, dimentions, rest_of_data = self.decode_packet[0x26](self.read_fully(connection)) # find out why prevous_gamemode is allways b'\xFF' and what it means
             
             if gamemode == b'\x00':
@@ -194,7 +214,7 @@ class Server:
 
         return response
 
-    def honey(serveraddr=socket.gethostbyname(socket.gethostname()), serverport=25565):
+    def honey(self, serveraddr=socket.gethostbyname(socket.gethostname()), serverport=25565):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
             server.bind((serveraddr, serverport))
             server.listen(10)
@@ -254,5 +274,5 @@ class Server:
                     print(f"\nError encountered, continuing\nError: {err}\n")
 
 if '__main__' == __name__:
-    stat = Server()
-    print(stat.honey())
+    stat = Server("157.90.211.152", 25584, username="PythonClient")
+    stat.offline_login(quiet=False)
