@@ -4,7 +4,7 @@ import struct
 import json
 import time
 import zlib
-from PacketDecoder import packet, _Packets, _static_pack_varint
+from PacketDecoder import packet, _Packets, _static_pack_varint, _static_unpack_varint
 
 
 # will use when online mode is added (please add if you have free time [I don't have internet on my desktop, so I can't])
@@ -115,8 +115,13 @@ class Server:
                 print(f'in\t{byte}')
 
         try:
+            if return_id:
+                return zlib.decompress(byte), packet_id
             return zlib.decompress(byte)
         except:
+            if return_id:
+                return byte, packet_id
+                
             return byte
 
     def offline_login(self, version="1.18.2", quiet=True):
@@ -164,17 +169,32 @@ class Server:
 
             # max length before compression doesn't seem to work here
 
-            login_suc_bytes = self.read_fully(connection)
+            loginorcompression, id = self.read_fully(connection, return_id=True)
+
+            if id == 0x03:  # setting compression # login_suc_bytes
+                compression_length = self.decode_packet_login[0x03](loginorcompression)
+                print(f"compression length: {compression_length}")
+                login_suc_bytes = self.read_fully(connection)
+                login_uuid, login_username, login_suc_bytes = self.decode_packet_login[0x02](login_suc_bytes)
+                print(f"login success: \n\tuuid: {login_uuid}\n\tusername: {login_username}\n\textra:{login_suc_bytes}\n")  # Login success
+                
+            elif id == 0x02:  # login success, if it isn't either the server is messed up or python did some black magic again
+                print("compression not set")
+                login_suc_bytes = loginorcompression
             
-            if b"This server has mods that require Forge to be installed on the client. Contact your server admin for more details." in login_suc_bytes:
-                print("Server has forge enabled, which I have to either find a way to spoof it and ignore the mods, or, find a way to add mods")
+                if b"This server has mods that require Forge to be installed on the client. Contact your server admin for more details." in login_suc_bytes:
+                    print("Server has forge enabled, which I have to either find a way to spoof it and ignore the mods, or, find a way to add mods")
+                    return
+                
+                login_uuid, login_username, login_suc_bytes = self.decode_packet_login[0x02](login_suc_bytes)
+                print(f"login success: \n\tuuid: {login_uuid}\n\tusername: {login_username}\n\textra:{login_suc_bytes}\n")  # Login success
+
+            else:
+                print(f'bad packet id receved: {id}')
                 return
                 
-            login_uuid, login_username, login_suc_bytes = self.decode_packet_login[0x02](login_suc_bytes)
-            print(f"login success: \n\tuuid:{login_uuid}\n\tusername: {login_username}\n\textra:{login_suc_bytes}\n")  # Login success
-
             # find way to catch the error that comes from here when hitting a forge enabled srever
-            play_user_id, play_hardcore, gamemode, prevous_gamemode, dimentions, rest_of_data = self.decode_packet[0x26](self.read_fully(connection)) # find out why prevous_gamemode is allways b'\xFF' and what it means
+            play_user_id, play_hardcore, gamemode, prevous_gamemode, dimentions, rest_of_data = self.decode_packet[0x26](self.read_fully(connection))
             
             if gamemode == b'\x00':
                 gamemode = "survival"
@@ -184,11 +204,42 @@ class Server:
                 gamemode = "adventure"
             elif gamemode == b'\x03':
                 gamemode = "spectator"
+            else:
+                gamemode = f"Unknown ({gamemode})"
 
-            print(f"login (play): \n\tplayer EID: {play_user_id}\n\thardcore: {play_hardcore}\n\tgamemode: {gamemode}\n\tprevious gamemode: {prevous_gamemode}\n\tdimentions: {dimentions}\nextra/not unpacked: {rest_of_data}")  # Login (play), still wip as its massive
-            
-            print(f"Custom payload: \n\tserver flavor: {self.decode_packet['custom payload'](self.read_fully(connection))}")  # custom payload, might only work on non-pure vanilla servers
-            print(f"something: {self.read_fully(connection)}")  # don't know yet
+            if prevous_gamemode == b'\x00':
+                prevous_gamemode = "survival"
+            elif prevous_gamemode == b'\x01':
+                prevous_gamemode = "creative"
+            elif prevous_gamemode == b'\x02':
+                prevous_gamemode = "adventure"
+            elif prevous_gamemode == b'\x03':
+                prevous_gamemode = "spectator"
+            else:
+                prevous_gamemode = f"Unknown ({prevous_gamemode})"
+
+            print(f"login (play): \n\tplayer EID: {play_user_id}\n\thardcore: {play_hardcore}\n\tgamemode: {gamemode}\n\tprevious gamemode: {prevous_gamemode}\n\tdimentions: {dimentions}\nnumber of bytes extra/not unpacked: {len(rest_of_data)}")  # Login (play), still wip as its massive
+
+            print(rest_of_data)
+
+            print(self.read_fully(connection))  # ment to be the flavor, but at this point packets are getting borked and this ends up being 1/2 of it
+            packet_data = self.read_fully(connection)  # 2nd half of flavor and start of change difficutly
+            # at this point im giving up
+            """
+            if b'\x0b' in packet_data:
+                for i in range(len(packet_data)):
+                    if packet_data[i] == 0x0b:
+                        print(packet_data)
+                        print('\n')
+                        packet_data = packet_data[i:len(packet_data)]
+                        id, n = _static_unpack_varint(packet_data, return_num=True)
+                        packet_data = packet_data[n+1:len(packet_data)]
+                        print(packet_data)
+                        length, n = _static_unpack_varint(packet_data, return_num=True)
+                        difficuty, locked = struct.unpack_from('c?', packet_data)
+                        print(length)
+                        break
+            """
 
     def get_status(self, quiet=True):  # Gets a minecraft servers status, is fully compleated
         if quiet != self.quiet:
@@ -274,5 +325,6 @@ class Server:
                     print(f"\nError encountered, continuing\nError: {err}\n")
 
 if '__main__' == __name__:
-    stat = Server("157.90.211.152", 25584, username="PythonClient")
-    stat.offline_login(quiet=False)
+    stat = Server("93.100.246.253", username="PythonClient")
+    print(stat.get_status(), '\n\n')
+    stat.offline_login(quiet=True)
