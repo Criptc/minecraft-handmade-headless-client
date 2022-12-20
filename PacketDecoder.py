@@ -42,6 +42,8 @@ class _Packets:
                 data = data_packet[0:16]
             else:
                 data = data_packet
+
+            print(len(data))
             data = uuid.UUID(bytes=data)
             uuid_data = data.hex
             # a minecraft uuid is 8-4-4-4-12
@@ -66,26 +68,36 @@ class _Packets:
             return login_uuid, ''.join(username), login_suc_bytes
 
         @staticmethod
+        def login_0x03(data_packet):
+            return _static_unpack_varint(data_packet)
+        
+        @staticmethod
         def play_0x26(data_packet):
+            print(data_packet[0:20])
+            print('\n')
             out = []
-            data = struct.unpack_from('i?cc', data_packet)
+            data = struct.unpack_from('i?Bc', data_packet)
             for i in data:
                 out.append(i)
-            rest = data_packet[7:len(data_packet)]
+            rest = data_packet[8:len(data_packet)]  # would be 7, but there is a random \xff in there
             dimention = _static_unpack_varint(rest)
             rest = rest[1:len(rest)]
             dimentions = []
             
             for i in range(dimention):
                 length = _static_unpack_varint(rest)
+                rest = rest[1:len(rest)]
                 mid = ''
-                data = struct.unpack_from('c' + 'c'*length, rest)
-                data = data[1:len(data)]
+                data = struct.unpack_from('c'*length, rest)
+                
                 for i in data:
-                    mid += i.decode()
+                    try:
+                        mid += i.decode()
+                    except UnicodeDecodeError:
+                        print(i)
                     
                 dimentions.append(mid)
-                rest = rest[length+1:len(rest)]
+                rest = rest[length:len(rest)]
                 
             out.append(dimentions)
             out.append(rest[0:len(rest)])
@@ -100,19 +112,8 @@ class _Packets:
             
         @staticmethod
         def custom_payload(packet_data):
-            packet_data = packet_data[16:len(packet_data)]
-            server_type = []
-
-            for i in range(len(packet_data)):
-                try:
-                    if packet_data[i:i+1].decode().isprintable():
-                        server_type.append(packet_data[i:i+1].decode())
-                    else:
-                        print(i)
-                        break
-                except Exception:
-                    pass
-            return ''.join(server_type)
+            
+            return packet_data
     class client:
         @staticmethod
         def handshake(packet_data):
@@ -187,7 +188,8 @@ class _Packets:
 packet = {
     "decode": {
         "login": {
-            0x02: _Packets.Decode.login_0x02
+            0x02: _Packets.Decode.login_0x02,
+            0x03: _Packets.Decode.login_0x03
         },
         "play": {
             "custom payload": _Packets.Special.custom_payload,
