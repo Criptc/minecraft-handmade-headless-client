@@ -96,7 +96,7 @@ class Server:
         connection.send(data)
 
     def read_fully(self, connection, extra_varint=False, return_id=False, printall=False):  # Read the connection and return the bytes
-        packet_length = self._unpack_varint(connection)
+        packet_length = self._unpack_varint(connection) - 1
         packet_id = self._unpack_varint(connection)
         if not self.quiet or printall:
             print(f"\n{packet_length}")
