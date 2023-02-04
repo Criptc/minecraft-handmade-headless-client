@@ -1,41 +1,56 @@
 #!/usr/bin/python3
+from PacketDecoder import packets, _static_pack_varint
+from Crypto.Cipher import AES
+from getpass import getpass
+from hashlib import sha1
+import requests
+import base64
 import socket
 import struct
 import json
 import time
 import zlib
-import getpass
-from PacketDecoder import packet, _Packets, _static_pack_varint, _static_unpack_varint
-
-
-# will use when online mode is added (please add if you have free time [I don't have internet on my desktop, so I can't])
 # import rsa
+import os
 
-# compressed so that it is less bytes total for this file, to make
+# compressed so that it is fewer bytes total for this file, to make
 # a custom one, just replace this with json.loads(dict) where dict
-# is a dictonary containing all the data (see https://wiki.vg/Server_List_Ping#Response)
-pingdata = zlib.decompress(b'x\x9cMV\xc7\xae\xeb\xca\x95\xfd\x95\x8b;\xa5\x9f\xc5L\xd1\x1e\x15s\xceAT\xa3\x07\x0c\xc5L\x91b\x16\x8d\xf7\xef\xd6y\x8d\x86]\x93\x9dj\xa7\x02ja\xfd\xeb\xf7\x0e\xe7\xa5\x19_\xbf\xff\xf1\xeb_\xbf_\xe9\x00\xbf\xcao\'\x9d\xe0\xfc\x0b\xfb;\xc6\xfe\x1d\xff\xfd\xb7_\xbf\xa7y\\\xc7|\xec\x7fb\x0c\x8d\xfe\xfe\xf3\xc7\xd7\xa7\x9fo\xea_yCz~%\x85~\xdd\xe3\xabo^?EH\xf6k-\xe90\xf5?\xd6\xff\xfc\xa7\xb82\xbe\xb29\xfd)\xbbmM\xf1\xe3\xc1P&\'\xf0\x14\xfeq\xbf\x13\xf7?\xc8\x94e\xff\xc8\x88\x82\xf8\xa3\xbcg\xf4\x9d\xa0Y\x16\xcf\xd2\xdf\x7f\xfe\xefO\xd7\x02.\xf9\xdcL\xeb\xffO\xbc\xc2s\xfd)\x01~\x99\xdf\xb6\xf9\x9c\x96\xeb/\x1f\xce\xdf\xa5\xfe\x1a\xb2L\xf7&\xff\xeb\xea\xef"]\xd3\x7f4CZ\xc1\xdb\xf4\xaa\xfe\x99\xa5\x0b\xa4\xc9\xbf5\x11g{\x07\xaa\xcb\xd5\x08\xbe\xc7\xf2\xc3Z\x0c\xab\xaf&\xfe\x98\x1c\xe0\x81\xfa\xa3\xf4<\x92j_\xa9\xf0h/\xba\x91G>6\xfcI\xe0\xf70\xf2\x02\xe5b\xf0k\xd7\x04\x7f\xb2\xf6\x8d\x91\xf4\n\xd7\xee\xb1\xc4\xabIY\n%\xea\x97\x9d\x9f\xe8\xb7\xaa\x9eHS|s\xb7\x8ecE\xda\xe2\x11\xafo\x05\xde\xf0\x15\xfc\xcc\xe2qI\x1e\xc4g\x9a\xd2("\xda\xe8\xddj\xca\xb6N\x14\xd2\x12\xd6\xf5\xc4\xa1\xf2*z\xfb\x11\xf6\xf4}!,S\x17/\x8ap\x9c\rB\xb8\x85\x1b\xe5\xb1\x9f\x915\xd3\xf6Y/`\xcd\x12\xab\x92\xe6\x8c\xeb\xf8\xd5\xf0\x0cp\r\x17\xbe\xc4\x9f\xd8\xc0\xde\x17\xeeZX\x11&\xe5$\xa9Q\x91\xd7g\xab\xd1\xfb|\x15\xef\xd3u\xa8%X\xcf0\x8b$\xb0\t\x8f\x8f\xb3\xa7\xdda\x8d,\xfe\x14\xa7\xf7\xf3\xdd\x1c^\x15c*\x98rd\xc5:\x95[;m\xb9\xb2>\x7f^\x19\xb3\xd9\xfb\'\xb3\xb1\x0f\x91\xba\xa0\xd8d\xeefU\x1b\x86\x13\xf2F\xbd\xebMJ`\xc5!\xc4\xc4(\xe7\xfb\xe1\xd3\x1b\xddO\xd95\xb2n\xef\xc59\x95!Z\xff\xe6\x11[\x87Si\x89\xcai\x15*7v\xf4l\xa1\xd6\x14~\xe0\x9b\x9e>~\xb5\xb9\x9f\x16\xec\xaf\x80\xa6\x93T&\x12\xdcB\xce%\xad\xde\xa4\x02\xa2d\xc1]\xeeA:\xd3\xcb\xd3\xca\x9b\x7f\xf0\xf8\xfcN\x07f\xc9d\xac\xfb\xc8\'-\xccn\xc27\x14\x81\x9fQ\xad$\xcd0\x07\xf5l\x00\x92\xa2P8\xb3\xa2*\x8dz\xedJ\xb9\xe6\xbcC\x9aS7\xacz\x00L\xa9\xe1;\xb0D\xa9\x0c\x81Q\xa7\xd5\xd8\x84L\r\x03\xdb\x9c2\xd1\xb6D\x17\xf5=\xef\xb5U(\xea\x0fM\xf9V\xb9\xe7\xca\xd3\x17!\xca\xbd=a\x8a\xc4\xe8[<\x13\x9c\xa0b\xfb\xbab\x15B\xca\xcf`M\xc3|=\xcag0\xca\x94\x90\x00\x03K\x17dg\xfd\t\xfb\xbcD\x92D5\xc3Z{\x97Kt*\x1d\xbb\xb8z\x1aji\x8c\x8c/[\xca\xc3\xe3,u\x8b\xe8\x86D\xddW\x95K\xc8r\x1b\xc1\xc2\xdb\x08qOU\x94B\x89\x13\xe2\x14aS\x80\x13\x0f8\x1f1xx\xf7a\xa8t\xcd\x93\x01\x90n\x18\xe4wE\x9d\xf1D\xb1\'`,{/Z\xd7\x94Dx\xd1\x19\x17\x95q\xbe\'\x98V>\xfbu\x86\x1a\x96\xd8\xa0\xc1\x91x\xa3\x1czDH\xd7T\xc4F\xef\xeea\rw\x1c\xaf\xc9K\x9eDPM\x94$\x01\xe7\xde\xf2e\xaea\x13P\xac\x96I\xfd\x8f\xd9\xe0<Y\xbd\x94\x02@\xcd\xde%\xd1\x93\xa2\xf4\x93{\x99A\no\xdeT/\x8bt\x8f7\xc3\xf57N\x1c\x8bY\xf6#\xf0`\\\xa4\x87k\xc9:\xb4t\xd2Q\xdci\xb2\x13\xf2\x9a%\xc4\xa8\'d@\xad\xabN\x98\xd4\xfbJp\xa7\x9c\xedYZ\x05w \x1d&\x0c1|\x0c\x8bw\xc1\xa2x\xab\x9fq\x80\x1dx\x81\x82U\x16_\xc8\xe2\xa1\xadA[6\x86\xa0\xaa\xcf1\x8a\x8e\x9c\x1a\xc6\xe0\xa9_\xbf\xac\x83\xb9K>a\x93\xe1]\xab4cSR0\\\xaa\xf3\x0eh\xf0\x9d\xc29\x0b\xfdI\xb6&v{\xac%\xc9\x93W\xbc:\xacA\xbb4z\x0b\x93Y\xe9OB\xd1\r?\xe2\x053#\xc5\x82,\xad\xd2o\x15\xf6\xf1\x18W\x93{\xee\x80\x9e\x8a\x81\x12\x8c8pB\xa0\x08d\x96\x00\xfa2\xa6n\xd0\xcc\x8e\xffp\x0c\x1f?\xf2\x80\x98\x90\xe8=G6\x00K\xadG>\xa6\x01\xb5\x8d\x05\x0b\xe7@\xf6\x00\x8b`\xd0\xd7\xb6\xb6y\x80m\x04\xcf\x866\x06\xc54m"f\xed\x84\xb3W\x90\xa7\x0e\x9bW\x89\x16D\xa7h\xca\x94\xd1D\x05\x14(\x02\xd7\xbd\xc5:\xc8H>e\x0c\xe5\xa5\x1as\xb7~7\xc1B\xe1\xfe$\xc8J?p\x97\xd7\x0c\xf6\xf0qW\x08\x12\xa3\x11TP\x83\xef\xef\x0b|\xc0\xad\xbay\xe6\x05\xc5\x1e\x0fo\xadT8\xdc\x1f\x8c\x98\xb2n\x89H\xdc|a\x95\xf9\n\xc7[|2\xc1\x16\xc2i\xec\x85\x07H\x03\xbb\xed-\xe5\x0e\xb7\'\x0b|\xdaN\x9c\xc1vqK\x95Q\x1a\x1e\xd4\x93L\x11\xddz\x9f\xd1%W2\xd80\xd7H$\xe2\xdaG\xa0\xedc\xf6q\xc8k\x1e\xee\xcdS\x0c\x10\xc0DT_)\xcf\x1b\xc7%\x1eJ\xac*\xaa\xbb\x031\xb4O\x9c\xb9\xe4Q~\x8d\xf0\x088nh9\x89:\x93L\xe5\x98\x8fY?M\xde\x95Tq [\x87\xe2\x01\xefQO\xb0\x05_\xec(++>\xa3*\x19\xf1\xec\xea\xb6\xa7>\xd4\t\x98\xa3\xb4Q\xe5@\xf6a{\xb7\xb0\x83M\xec\xe9\xd4\xe5\xa2/sC\xe4\xbcMa\x85\xfcr\xedJ\xc95\xe3]\xa8\xa2`\x13w`\x1d\xe5\xb6\x9b"\xa2\x01\xfd"A\x98\x9dW\xc0s\xeb\xdd\x95;\xebIs\x1f\x9ad_\xb0\n^\x0f&\xc6[\xed\xea\x95p\xfbT\xc0\x0bW\x9f\xc4\xd1(\x84,\x0b\xc4\xb9\x08\xe5\xc9\x7f\xfbrOV\xcaA\xf8V\xb6\xd65\xfb.\xa3h\n\x98/\\\x7f\xa6\xfd\xc6\x0fZ^#e!\x14\xa3\x03\xf1\xfc\xa6q&.M\xf2j\x9d\xad]\xa9\xa8\xbf\x8a\x1e\x15\xd1s\xc6\xc0\x86_Y\x93@\xc8\xcd\xa6o&\xb2\xb2\'\xd7\x94\xf9q\xe7:y<Z+\x17\x9dd\x1b\xc5\x11x\xabY~bKL\xda\x19\x83\xda\xe3\xad\xd1<W"@\\\x1c\xd4\\%\x9e\xdf1\xb5!\xe0\x91\xb3\xcd\x87\xcc\\.\x1d1\xa7\xd6J\xdb)\x8f\xd2)9\xd3\xac\xf7\x1d\x08\x9e\xf0z\xf1U\x98D\xc3\x98\xa0\x97m\x8b7\xab\xa1\x0c\xef\xc9\xe7\xec.\x7f\x80\x13@\xc5\x0eS\xe3\xb1\xe5\xcb\x0b.\x8b\x13j\xea\xfa\xccq\xa2\xb1\xe3$\xf76[v!f\xd5\xf3\x15O\xee\xc83\xb9K\xcb\x85\x19\xe1\xce\xf0\xea\xb1\x9b\x80\x13,P\x02?\x0fI\xf2j\x86\x1e\xda\xde##\xf7\x0b\xc5\x1c\xca\\\xde\xe7r\xc82i\xf1X\xaa\xc7W\xa8\xd3eW\x88\xb2iB\xf3\xfd\x81\x96\xa0q:\xeb\xf7\x989\xc5z\xd7\xa68\xe2\n\xa6\xff\x88\x1f\xcea|\x98zK>v\x0cNT\xb2\xa0_\x1c\xda\xf3-f\x8d%N\x88D;\x8c\xfb\xe5\x07\x07\xbc\x9f\xf8\xfa\xc5\xf7\x109\xb8t\x17n_\x94/*\x8c_\x1e$\xddt\x1f\x8c*\x1e7\xc3\xf6\xc2\x932b\x83k\xa5\xc5\x8a\x93\xd7\x87\x98\xcb(\xdd\x9e$\xd0N\xdeq\xca\xc5\xc9\x0b.xO\x84\xd7\xd2\x931\xb1\xfc\x95\xbd\xf2\x85\x1aL4+t9\xc7[\x99\xc1\x9d\xe7F\xe7\x93\xdb\x93V\xf5\xda)\xd7\xb9W\xef\xc8\x90\xa5\xd2)\x0c\xfcN\x11\xc1\x9ed\x88\xc7\xde\x0e\xbdm\x07\x07\xb9\xec\'\xaeBf\n\xf2;\x7f\xd8\xc9\x99\x97_\x9c\x9b|\x19\x15\xfc\xd2s\x1f\xd5\xd5\xdee\xc3\xed|\xe7\x90\xa0i\x18\xf0\x96!\xb6\x9c\xb2\'\xb5c\xebRO\t\xb6R\x95N|?qy\nY\x07\x04n\xaf\xa4^\xbb\xf1u\x81s&%\xe4S\x90\xd17\x94D\xed\xddA\xf0\xfc#\xfb$\xe3\xd8\x94\xa1W\xaa\x03 \xe7T\xfd\xd0S/\xae\x06\x88\xcf\xe6S\xe7\x00\xad\xbd-\xb7\xe9\xe2FJ\x80\x93H)\xaa\x08=\x15\\5\x96\xaf\x90\xb9=\x8a\xa7\xc9}@\x84\xd06#J\x8b\xd8\x93#A\xc3\xc6\xccT\xf5\xcb\x06\xf5\xe5\xa2\x97g\xad\xd39\xe2`=\x82\x0b\xd6\xde\xcaq\rd9\x96Da\xca\xe9\r\xf3\x01?\xec\x8e\x9ek\xee\xc3\x95f+\xaf\xfb\xae\x03v\xdf\xe6D]b\xae\xb0g\xec\xd4\x81{c\xcb\xf1\x17"\xb0\xb1\xab\xbe/\x94\xb9B\x88\xb7\tH\x074\x03F\x8c{\'S)\xe4\xcd\xccn\x92t\xe7t\xeb\x87|\x01\xb1\x97\x82\xce\xdf\xdc\x81\xe7\xff\x8f\x8d\xc2\xbd\x81\xc7\xc2\xd7\xe9\x0f\xf7+\xd3~\x81_7|\x95\xe3\x9c\xc3\xc5\x87\xf96\xc3\xff\x0e\xfe\xf9o\xb4\n\x8b\xd5').decode()
-
-if getpass.getuser() == 'runner':
-    replit = True
-else:
-    replit = False
+# is a dictionary containing all the data (see https://wiki.vg/Server_List_Ping#Response)
+pingdata = {
+    "version": {
+        "name": "Paper 1.18.2",
+        "protocol": "758"
+    },
+    "players": {
+        "max": 50,
+        "online": 49,
+        "sample": [{
+            "name": "HACKER",
+            "uuid": "107c32ae-8838-4a99-b3d3-f8b6836992ba"
+        }]
+    },
+    "description": {
+        "text": "A fake Minecraft Server"
+    },
+    "favicon": "data:image/png;base64," + base64.b64encode(zlib.decompress(b'x\xda\x01D\x07\xbb\xf8\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00@\x00\x00\x00@\x08\x02\x00\x00\x00%\x0b\xe6\x89\x00\x00\x07\x0bIDATx^\xed\x99\xdfo\x14U\x14\xc7\xcf\xbd\xb3\xbc\x90\xd2\xa4\xdb\xee\xecR\xa0\xd8\x9f\x16\x14"\x18}\xf0\xdf\xd1\'\xe4I\x82\xbf\x82\x1ax0J\x81\xfe@}\x13\xa3B\xf9\x19c\x0c"\xd2\x1fl[Z\x8b\x18_|\xa9\xa5\xa5U\xde5j\x8c\x91\xee\xb6\x9e~\x8fssgg\x87\x9d\xd9N]Iz\xf2\xcd\xcd0\xa13\xe7s\xcf\xb9\xe7\x9e\xb9K\xb9G\xdc\xa8\xf4\xc6\xa3f\x1b\x00\xb5\xb6\r\x80Z\xdb\x06@\xad-\x12\xc0\xcel\xf6\xb1l\x96/Z\xb3\xd9\x03uuF\x1f\xa4R\x15u\xc8q\x8c\x9e\xaf\xaf7j\xc5\x03\xf9\xb1;qQ\xb5E\x02\xe0\xd7\xc8\xfb\xda\x93\x03h\xf7fD\xa6\xa6j\x8b\x04`[R\x00\xa5\xcf\xad\xd6B\x01\xb6Bl\xcd\xb9\\g6\xfb\xb8\xeb\xf2l\xedr\xdd\xa4\x00v\xe1\x81\xfc\xd8.\xd7m\xc6\xbb\x9a\xa1\xb8V\x1e\x80\x1f\xb7\xa7\xb1\xf1\xa9t\xba\xbb\xa9io:=BTVs\x96\xfe&Z\x82\xf8\xe2\x9e\xa5\xf3D\x1f\x13] \x1a$\xea\xb3t6\x952z\xae\xa9\xc9(.C(\xc0\xbet\xfa\xe9\x86\x86\xdd\x8d\x8d\xfb\x1b\x1a\x82\xae\x07\x01V,\xd9\x00W\xe0\xfagD\x97\xffK\x00\xb6\xae\xa6\xa6\xee\xc6\xc6\xd6L\x86\xc7\xa0\xebA\x80\xa2\xe7}\xb1V\x11\xd8\x8aj\xd3\x86\xb2\xc0\xe3\x9etz\xbfD Z\n\x85\x01\\$\xfa\x94\xe8\x12.\xd6\x05\xc0\xd4x^\xa93D\x15\xf5\x00.\x16\xa0\xa2%;\x85\xe4\xce2\x96\xc48\xd1\x10\xd1$Q\x9e\xe84\xd1)\xa2~\xa2\x01f\xd0\xba\xcfq\x06\x94\xeau\x1c^\xca\xb9j\xf7\x0425\xbe\xdbu\x83\xee\x06e;ZQ\xcbp}\x94\xe8\x1b\x90\xd8\x00\xbdZ\xb3\xeb\xfdJ\x9dr\x9cN8\xd0\x92\xcd\xb6T\x01`\xaeZ\xa2E\xa0d\xb2\x1f.\x8e\xd2\x18\xd1\xd7D\x13H\xb9^\xa2\xe3D\'\x81\xc1~\xb3\xfa\x00\xb0#\xbe\xdf\xc6\x88\xd3\x9d7\xc5\xed\xb9\xdc\xee@\x04L\x1e\xaf\x05\x80]\x1f&\x9a\x02\x89D`\x00\x17\xfd^\n\xf1\xc8\xaff\x07:\x90\x0b\xb2\xf9D7:XWgd/>[\x05$C0\xd7+J\x16\xf4,\xd1"\xd1<\x18F\x81\x94Gu:\x87\x95}V\xa9\x176o6\xda\x1e3\x1a\x91\x00\x82\x9eE\x14\x03\xfc\x8c\'\xdc\'Z@\x1c\xd8\xfbi,\x8c\x8b`\xb8\x82q\xdd\x01\xe2N\xbcQ\x11\x15V\xb2q\x16\xcb\xe0:\x820\x8c\xcd\xe1\x0c*\xec\x19\x7f\x04J\x1d\xacd\x95\x01~\xd0\xfaW\xad\x7f\xd3\xfa\x17\x1e\x95ZBF=@\x8945\xb4D6\xc0"\x18$\x0e\x92<\xb7pq\x19\xbb\xdbj\x04\xfc\x00\\\x0cyMv\xa1Gjw\xdd6\x8c\xacVO\\6w@-\x18I\xfe\xb1\x1d#/\xa3N\xd7\xed\x08H\x1e\xc7+\xecI\xd7\xbd\x9aJ\x19\xcd\xc3\xbf\x05Ks\xb8S\xc2`$\xbb\x87h\t\xb3 \xfa\x93\xe8\x0f\xa5x\xfc])\x9e#3_\xd7\xb5\xfe\x02\xe35\xad?\xd2\xfaC\xad?Q\x8a\xc7\x97\x1d\xc7(\xb4\x95\x083\x1b\xe0Gx|\xd7\xd2\x8c\x7fW^\x8bL\x05\x9b\xc0\xea\x97f\xe42\xd6L\xf5\x00\x1c>\x1b`\x0e\xb3.\x99&$\xc9\x02\xc8\x1e\xc2Yw\x13\xde\x9f\x95\xaa\xb5N\x00\x0b!)T\xb5$\x02#X3v\x04\x06\xd7\x02\xc0\xcb\xeb;\xad\x8d\xc4\xf5\xbbp\xbdP\xed^\x11\xa6\xa2W\xbbd\x0f\x19G\xf9\x92\x9e\x8aw\xf4wy\x07$z[\xebx\x00\x1d\xe1\x00A\x0f\xd6(\x06\xf8\t\xae\xcb\x1er\x0b\xaeKO\xc5\xddT\x0f\xc6w\xe2\x02\xb0\xd9\x00\x89/\xdc\x12\xd9\x00\xd3`\xb8\x83 \x08@\x1f\x1a\x93H\x00m(\xcc\\w\x9fp]\x1b`!\xe9\xbc_\xb1\x1a\xf5\x07\xfe\x14\x1a\xf3\xd6\x03\'R\x8f\xd6\xc7\xb4\xeeQ\xeah\x945\xc0i3\xa3\x94\xd1\xfcz\xe6}\x01.\x8e`\xf9\x8eCcH\x1bN\x9e\xc3\x96xk\xe2\x8d\xab\x15s\x1a\x01\x80\xbbT\x0b`]\xf3\xbe\x80\t\xbe\x86\xf2?\x8c\xeb\x9b\xc8\x99\x11?\x80\xed^e\x80v\x7f\x04\x16\x11\xd3{H\xd0\xa4&\xdeh\xd9\xdb\xbc\xc6\xa0i\xe8{\x04\xc1\x06h\xc1\x17\x9cXl\x80{\xc8\xc8Y0$\x05 I\xb8\x8c\xfeB\x00$yd\x0b\x93o:\x1f\x80\xd5\xb1V\x06(\xd9\xbc\xe4\xb9\x92\xa6\x85\x80+U\xa8\x88\x191\x92z?\r\xd7\x0fX:\x9cJ\x19\xd9_p\xb1\x01F\xe1\xfd\r\xcc\xd0:\x01\xdc$\xba\x9d @\xce\xdf\xc0\r\xc1\xfb\xaf0O\x89\x00\xac\xf8\x01F\xf1\xcd0\x81\xb7\xc4\x06\x90\xd6z\x07.\xb8\xf6w\xa0Nu\xfb[h\xc9\xceQ\xd4\xbb(\x00EKR\xe3m\x15Q\xef}\x00J\xddPjR\xa9!\xa5\xe2\x01\xf0\xdd#[\xb6\x18}\xa9\xf5U\xa5>\xe7v\\\xa9\xbf\xf0\xa6%\xc8~}\xd0\xdd\xa0\xf7\xb6s\xf2A3ai\x1a\xd3q\x8c\xe8\x08\xd1+DG\x95z\xad\xbe\xde\x88+}3\x7f\xb8\xb8\xee\xbf3\xeb}\xc4\x18\x9fs\x0f\x01\x90j0\x8c\xd7\x04=\x8b\xa8\x12\x80\x11\xb4\xc7\xf2X\xd1\x18\x8e\xbd^%z\x89\xe8 _\xf8\x01,?C-\x14 \xaf\xd4\x88\xb7{\x07=\x8b.\x1b@\x16\xa8\xd4\xf8I|\xe3\xdf\xc1\xf3\xdf\x04\xc3!\xbe\xf0\x03D9\xe7\n\x05\x18Vj\x18\xd33\x8e\x13\xf3b\xe4\xb4Y\t\xcfo\x1b \x0fM\xe1\xceQ\xa2\xd7\xb9\xcb\'z\xcb\x0fP\x92-e\xcd\xb7\x88\xe5\x98q\x1b\x8e\x19\x07\xb56\x1a\xf3Z\x94(\x0b\xb7\x10\xe8gLWc\xe6\x9e]\x7f\x0fm\xfd\x00t\xd2qN8\xce)\xa5x\xe4Wo\x8b\xf3\xd3S\xf92\xca\xb1\xb3\x01\x86\xe0\xd0\xb5h\xa5\xb3P\xae\x9f\x91\xd1\x060\xc7\x8c\xab\'\x8d\x0c\x90J\xf5)u2\x95\x8a\x926\xb6\xf9\x00\xccIu\x97?\x02\xf2\xee\x1b\x98\xc8\xe5\x80\xc7AMy\'p%\x9a\x84n#D\xa7\xe1z?\xb4:\xf7\xdc\x1e\xf3\x1d\xad\xe3\x9eT\xfb\x00Z\xbc?\xeb\xf4G`\xd4+\x17\xe3\xa8\xa4\xcb^]_\xf2\xceELy-b\xc1\x8c[\rY\x89\xf2\xde\xb7\xd5j\xe6x\x00\x9cB<\xf7\xec=\xc7AN\xaawF>\xa9.\x9fB\xcd\xb9\xdc\xb3\x99\x8c\xd1\xb7J\x19\xcd\xa3\x1b\xbd\x8ff\xee\x9c\xa5\tx6\t\xef\xe5\x03\xfc\x82\xa5K\x18W\xcft\xbd\xbc\xe7t\xefa\xbf\x91\xf7\xfc\n\x8e9\x8f\xfb3\x99\xd8\x87\xbb\xa57<\x0b\x03\x98\xc5\xc7\xc0"\x1aR\x1b@\xd2}\x14\x17\x838\xfc\x18\xb4$H\xfc\x05x\xc2\xcb{\xf6\xfe8f\xbd\xc7\x9b\xf5\xb6\xc8ic[y\x80\xad\xe1\x00w\xf1\r\xb9\x00\x0c\x1b\xe0\x16R\x7f\n\x17v\x04\xceCr\x94\xdb\xeb\xfd8\xd0\xeb\xcf\xfbg2\x19.;<\xeeK*\x02\x0f\x01\xe0O\x82Y\xa5\xe6pa\x03\xe4\xbdr\x99\x0f\x00\x98\xff\xb3\xfas\x06\x8eCz\x919\x1c\x81\x1eD\x803\x87W-{\xbf\xd7u\x93\x01\xc8\x05~\xe8\xee\xc4\x16\xc1%\xe2\x8d\xfaz#\x1b \x8a^\xac\xab3\xea\xc6a+\xa7>?Y~\xd83o\x8ce\xa1\x00a\x96\x14@\xe9s\xab\xb5H\x00\xa6\xbc\xf2\x9c%\x05\xd0\x16\xb3\\\x86Y$\x00\xe9csx_\xd5\x00\xefo\xdad\x03\xc8\x8e\x19l\x8f\xe3Z$\x80\xff\xb3m\x00\xd4\xda6\x00jm\x1b\x00\xb5\xb6G\x1e\xe0\x1f\x8f\xcco\xf1E\xf0\x12\x8d\x00\x00\x00\x00IEND\xaeB`\x82\xd9*k\xa2')).decode(),
+    "previewsChat": False,
+    "enforcesSecureChat": False
+}
 
 
 class Server:
-    def __init__(self, host='localhost', port=25565, username='', timeout=5, quiet=True):
-        # Init the hostname, port, timeout, username, etc
+    def __init__(self, host='localhost', port=25565, username='', timeout=5, quiet=True):  # ik that taking password as a var isnt secure, i will fix it later
         self._host = host
         self._port = port
+        self._client_token = os.urandom(4)
         self._username = username
         self._timeout = timeout
         self.quiet = quiet
-        self.decode_packet_login = packet["decode"]["login"]
-        self.decode_packet = packet["decode"]["play"]
-        self.encode_packet = packet["encode"]
+        self.compression_length = 0
+        self.encrypt = False
 
     @staticmethod
-    def _unpack_varint(sock):  # Unpacks a varint
+    def _unpack_varint(sock, ret_i=False):  # Unpacks a varint
         data = 0
         for i in range(5):
             ordinal = sock.recv(1)
@@ -49,6 +64,8 @@ class Server:
             if not byte & 0x80:
                 break
 
+        if ret_i:
+            return data, i
         return data
 
     @staticmethod
@@ -90,17 +107,24 @@ class Server:
 
         data = self._pack_varint(len(data)) + data
 
+        if self.compression_length != 0 and len(data) > self.compression_length:
+            data = zlib.compress(data)
+
+        if self.encrypt:
+            data = self.aes.encrypt(data)
+
         if not self.quiet:
             print(f'out\t{data}')
 
         connection.send(data)
 
     def read_fully(self, connection, extra_varint=False, return_id=False, printall=False):  # Read the connection and return the bytes
-        packet_length = self._unpack_varint(connection) - 1
+        packet_length, n = self._unpack_varint(connection, ret_i=True)
+        packet_length += n - 1
         packet_id = self._unpack_varint(connection)
         if not self.quiet or printall:
             print(f"\n{packet_length}")
-            print(hex(packet_id))
+            print(packet_id, hex(packet_id))
         byte = b''
 
         if extra_varint:
@@ -129,8 +153,18 @@ class Server:
         except:
             if return_id:
                 return byte, packet_id
-                
+
             return byte
+
+    def packcheck(self, connection, return_id=False):
+        data, id = self.read_fully(connection, return_id=True)
+
+        if id == 23:
+            raise Exception(f"Client was disconnected (0x17 packet in login phase): {data}")
+        elif return_id:
+            return data, id
+        else:
+            return data
 
     def online_login(self, quiet=True):
         if quiet != self.quiet:
@@ -139,44 +173,103 @@ class Server:
         if self._username == '':
             raise ValueError("Username can't be blank when logging in")
 
+        if os.getenv("PSWRD") != '':
+            print("PSWRD environment variable not found")
+            paswrd = getpass("Minecraft account password: ")
+
+        req = requests.get(f"https://authserver.mojang.com/authenticate", headers={"Content-Type": "application/json"}, data=json.dumps({"agent": {"name": "Minecraft", "version": 1}, "username": self._username, "password": paswrd, "clientToken": self._client_token, "requestUser": False}))
+        code = req.status_code
+        userdata = req.json()
+        req.close()
+
+        del paswrd  # don't want to keep the users password in memory just incase
+
+        print(code)
+        print(userdata)
+        exit(0)
+
+        if code != 200: # doesn't account for a 400 for invalid time stamp, but we aren't using timestamps
+            raise LookupError(f"Error with authenticating: {userdata}")
+
+        self.access_token = userdata["accessToken"]
+        username = userdata["selectedProfile"]["name"]
+        useruuid = userdata["selectedProfile"]["id"]
+        print(f"User authed:\n\tusername: {username}\n\tuuid: {useruuid}\n\ttoken: {self.access_token}")
+
+        exit(0)
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
             connection.settimeout(self._timeout)
             connection.connect((self._host, self._port))
 
+            self.send_data(connection, b'\x00', 1526, socket.gethostname(), self._port, b'\x02')  # 1.18.2
+            self.send_data(connection, b'\x00', username, True, useruuid)
 
+            packet_data = self.read_fully(connection)
+            serverid, pubkey, token = packets.Decode.login_0x01(packet_data)
 
+            self.key = os.urandom(16)
+            self.aes = AES.new(self.key, AES.MODE_EAX)
 
-    
+            epubkey = self.aes.encrypt(pubkey)
+            everify = self.aes.encrypt(token)
+
+            while len(epubkey) < 128:
+                epubkey += b'\x00'
+
+            while len(everify) < 128:
+                everify += b'\x00'
+
+            self.send_data(connection, b'\x01', len(epubkey), epubkey, len(token), token)
+
+            hash = sha1()
+            hash.update(serverid)
+            hash.update(self.key)
+            hash.update(epubkey)
+            hash = hash.hexdigest()
+
+            req = requests.post("https://sessionserver.mojang.com/session/minecraft/join", headers={"Content-Type": "application/json"}, data=json.dumps({"accessToken": "<accessToken>", "selectedProfile": "<player's uuid without dashes>", "serverId": "<serverHash>"}))
+
+            packet_data = self.read_fully(connection)  # currently hoping the server has compression lol
+            self.compression_length = packets.Decode.login_0x03(packet_data)
+            print(f"compression length: {self.compression_length}")
+
+            packet_data = self.read_fully(connection)
+            login_uuid, login_username, login_suc_bytes = packets.Decode.login_0x02(packet_data)
+            print(f"login success: \n\tuuid: {login_uuid}\n\tusername: {login_username}\n")
+
+            play_user_id, play_hardcore, gamemode, previous_gamemode, dimensions, rest_of_data = packets.Decode.play_0x26(self.read_fully(connection))
+
+            if gamemode == b'\x00':
+                gamemode = "survival"
+            elif gamemode == b'\x01':
+                gamemode = "creative"
+            elif gamemode == b'\x02':
+                gamemode = "adventure"
+            elif gamemode == b'\x03':
+                gamemode = "spectator"
+            else:
+                gamemode = f"Unknown ({gamemode})"
+
+            if previous_gamemode == b'\x00':
+                previous_gamemode = "survival"
+            elif previous_gamemode == b'\x01':
+                previous_gamemode = "creative"
+            elif previous_gamemode == b'\x02':
+                previous_gamemode = "adventure"
+            elif previous_gamemode == b'\x03':
+                previous_gamemode = "spectator"
+            else:
+                previous_gamemode = f"Unknown ({previous_gamemode})"
+
+            print(f"login (play): \n\tplayer EID: {play_user_id}\n\thardcore: {play_hardcore}\n\tgamemode: {gamemode}\n\tprevious gamemode: {previous_gamemode}\n\tdimentions: {dimensions}\nnumber of bytes extra/not unpacked: {len(rest_of_data)}")
+
     def offline_login(self, version="1.18.2", quiet=True):
         if quiet != self.quiet:
             self.quiet = quiet
 
         if self._username == '':
             raise ValueError("Username can't be blank when logging in")
-
-        """
-        0:  Handshake                            out     starts connection and gives connection data
-        1:  Login start                          out     sends username
-        2:  Set Compression (optinal)            in      max size before a outgoing packet must be compressed (zlib)
-        3:  Login success/forge detection        in      gives data about the user after the login has succeded
-        4:  Login (play)                         in      gives data about the user's entity, dimentions, gamemodes, etc
-        5:  Server custom payload (Optional)     in      tells server flavor, like paper or bukkit
-        6:  Change Difficulty (optinal)          in      ADD DISCRIPTON
-        7:  Player Abilities (optional)          in      ADD DISCRIPTON
-        8:  Client custom payload (optional)     out     ADD DISCRIPTON
-        9:  Client Information (clarify)         out     ADD DISCRIPTON
-        10: Set Held Item                        in      ADD DISCRIPTON
-        11: Update Recipes (clarify)             in      ADD DISCRIPTON
-        12: Update Tags (clearify)               in      ADD DISCRIPTON
-        13: Entity Event (clearify)              in      ADD DISCRIPTON
-        14: Commands                             in      ADD DISCRIPTON
-        15:
-        16:
-        17:
-        18:
-        19:
-        20:
-        """
 
         # start socket, set the timeout and connect to the minecraft server
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
@@ -192,33 +285,32 @@ class Server:
 
             # max length before compression doesn't seem to work here
 
-            loginorcompression, id = self.read_fully(connection, return_id=True)
+            loginorcompression, id = self.packcheck(connection, return_id=True)
 
             if id == 0x03:  # setting compression # login_suc_bytes
-                compression_length = self.decode_packet_login[0x03](loginorcompression)
-                print(f"compression length: {compression_length}")
-                login_suc_bytes = self.read_fully(connection)
-                login_uuid, login_username, login_suc_bytes = self.decode_packet_login[0x02](login_suc_bytes)
-                print(f"login success: \n\tuuid: {login_uuid}\n\tusername: {login_username}\n\textra:{login_suc_bytes}\n")  # Login success
-                
+                self.compression_length = packets.Decode.login_0x03(loginorcompression)
+                print(f"compression length: {self.compression_length}")
+                login_suc_bytes = self.packcheck(connection)
+                login_uuid, login_username = packets.Decode.login_0x02(login_suc_bytes)
+                print(f"login success: \n\tuuid: {login_uuid}\n\tusername: {login_username}\n")  # Login success
+
             elif id == 0x02:  # login success, if it isn't either the server is messed up or python did some black magic again
                 print("compression not set")
                 login_suc_bytes = loginorcompression
-            
-                if b"This server has mods that require Forge to be installed on the client. Contact your server admin for more details." in login_suc_bytes:
-                    print("Server has forge enabled, which I have to either find a way to spoof it and ignore the mods, or, find a way to add mods")
-                    return
-                
-                login_uuid, login_username, login_suc_bytes = self.decode_packet_login[0x02](login_suc_bytes)
-                print(f"login success: \n\tuuid: {login_uuid}\n\tusername: {login_username}\n\textra:{login_suc_bytes}\n")  # Login success
 
+                login_uuid, login_username = packets.Decode.login_0x02(login_suc_bytes)
+                print(f"login success: \n\tuuid: {login_uuid}\n\tusername: {login_username}\n")  # Login success
             else:
                 print(f'bad packet id receved: {id}')
                 return
-                
+
             # find way to catch the error that comes from here when hitting a forge enabled srever
-            play_user_id, play_hardcore, gamemode, prevous_gamemode, dimentions, rest_of_data = self.decode_packet[0x26](self.read_fully(connection))
-            
+            data, n = self.packcheck(connection, return_id=True)
+            print(n)
+            play_user_id, play_hardcore, gamemode, prevous_gamemode, dimentions, _ = packets.Decode.play_0x26(data)
+
+            rest_of_data = ''
+
             if gamemode == b'\x00':
                 gamemode = "survival"
             elif gamemode == b'\x01':
@@ -245,25 +337,6 @@ class Server:
 
             print(rest_of_data)
 
-            print(self.read_fully(connection))  # ment to be the flavor, but at this point packets are getting borked and this ends up being 1/2 of it
-            packet_data = self.read_fully(connection)  # 2nd half of flavor and start of change difficutly
-            # at this point im giving up
-            """
-            if b'\x0b' in packet_data:
-                for i in range(len(packet_data)):
-                    if packet_data[i] == 0x0b:
-                        print(packet_data)
-                        print('\n')
-                        packet_data = packet_data[i:len(packet_data)]
-                        id, n = _static_unpack_varint(packet_data, return_num=True)
-                        packet_data = packet_data[n+1:len(packet_data)]
-                        print(packet_data)
-                        length, n = _static_unpack_varint(packet_data, return_num=True)
-                        difficuty, locked = struct.unpack_from('c?', packet_data)
-                        print(length)
-                        break
-            """
-
     def get_status(self, quiet=True, ip='', port=0):  # Gets a minecraft servers status, is fully compleated
         if quiet != self.quiet:
             self.quiet = quiet
@@ -272,7 +345,7 @@ class Server:
             self._host = ip
         if port != 0:
             self._port = port
-            
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
             connection.settimeout(self._timeout)
             connection.connect((self._host, self._port))
@@ -287,7 +360,7 @@ class Server:
             # Read response, offset for string length
             print("json")
             data = self.read_fully(connection, extra_varint=True)
-            
+
             # Send and read unix time in ping/pong
             print("ping")
             self.send_data(connection, b'\x01', time.time() * 1000)  # ping
@@ -302,75 +375,79 @@ class Server:
             response = json.loads(response)
         print(response)
         print('\n', type(response))
-        response['ping'] = int(time.time() * 1000) - struct.unpack('Q', unix)[0] # adds ping response time
+        response['ping'] = int(time.time() * 1000) - struct.unpack('Q', unix)[0]  # adds ping response time
 
         return response
 
-    def honey(self, serveraddr=socket.gethostbyname(socket.gethostname()), serverport=25565):
+    def server(self, serveraddr=socket.gethostbyname(socket.gethostname()), serverport=25565, version="1.18.2"):
+        if version == "1.18.2":
+            version = 758
+        elif version == "1.19.2":
+            version = 760
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
             server.bind((serveraddr, serverport))
             server.listen(10)
             working = True
-            print(f"started honeypot on {serveraddr}:{serverport}\n")
+            print(f"started on {serveraddr}:{serverport}\n")
             while working:
                 try:
                     client, addr = server.accept()
+                    self.compression_length = 0
 
                     print(f"{addr[0]}:{addr[1]} connected")
-            
-                    version, is_ping = _Packets.client.handshake(self.read_fully(client))
-            
+
+                    vers, is_ping = packets.Client.handshake(self.read_fully(client))
+
                     if is_ping:
                         print(f"{addr[0]}: request, ping")
 
-                        print("reading nothing")
-                        self.read_fully(client)  # empty packet
+                        self.read_fully(client)  # empty packet (b'\x02\x00\x00', size + \x00\x00)
                         data = json.dumps(pingdata).encode()
                         length = _static_pack_varint(len(data))
 
-                        print("send json")
                         client.send(length + b"\x00" + length + data)
 
-                        print("ping")
-                        data = self.read_fully(client, printall=True)
+                        data = self.read_fully(client)
                         print(f"ping: {data}")
-                        print("pong")
                         length = _static_pack_varint(len(data))
                         client.send(length + b"\x01" + data)  # pong
                         print(f"{addr}: disconnected\n")
                         client.close()
                     else:
-                        print(f"{addr[0]}:{addr[1]}: request, login")
-                        
-                        if version > 1528:  # they are a higher version
-                            client.send(_Packets.client.disconnect("outdated server! I'm still on 1.19.2."))
+                        print(f"{addr[0]}:{addr[1]}: request, login, version: {vers}")
+
+                        if vers > 1526:  # they are overdated
+                            self.send_data(client, packets.Client.disconnect("outdated server! I'm still on 1.19.2."))
                             print(f"{addr}: responce, outdated server, version: {version}")
                             print(f"{addr}: disconnected\n")
                             client.close()
-                            
-                        elif version < 1528:  # they are outdated
-                            client.send(_Packets.client.disconnect("outdated client! I'm on version 1.19.2"))
+                            continue
+
+                        elif vers < 1526:  # they are outdated
+                            self.send_data(client, packets.Client.disconnect("outdated client! I'm on version 1.19.2"))
                             print(f"{addr}: responce, outdated client, version: {version}")
                             print(f"{addr}: disconnected\n")
                             client.close()
-                            
-                        else: # they are the same version and attempting to connect
-                            print(f"\n{addr}: data, ", _Packets.Client.loginstart(self.read_fully(client)), "\n")  # just id data (like username, uuid, etc)
-                            
-                            # skipping encryption request, idk how to work mc's auth servers, but maby you can add this
-                            
-                            # skipping compression, because we only need to send one more packet and don't start Play mode
-                            client.send(_Packets.client.disconnect("Invalid encryption response!"))
+                            continue
+
+                        else:  # they are the same version and attempting to connect
+                            data = self.read_fully(client)
+                            print(data)
+                            print(f"\n{addr}: data, ", packets.Client.loginstart(data), "\n")  # id data
+
+                            # skipping encryption request, idk how to work mc's auth servers
+
+                            self.send_data(client, packets.Client.setcompression(256))
+
+                            self.send_data(client, packets.Client.disconnect("Invalid encryption response!"))
                             print(f"{addr}: disconnected\n")
                             client.close()
-                except KeyboardInterrupt: 
+                except KeyboardInterrupt:
                     working = False
                     print("finishing last client before exiting")
-                    
-                #except Exception as err:
-                    #print(f"\nError encountered, continuing\nError: {err}\n")
+
 
 if '__main__' == __name__:
-    stat = Server()
-    print(socket.gethostbyname(socket.gethostname()))
-    stat.honey("0.0.0.0", 8080)
+    stat = Server("10.0.0.27", 55556, "CripticCode")
+    stat.offline_login(quiet=False)
