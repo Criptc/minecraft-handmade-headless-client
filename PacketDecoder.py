@@ -1,19 +1,20 @@
 import uuid
 import struct
 import json
+import base64
 
 
 def _static_pack_varint(val):
-	total = b''
-	if val < 0:
-		val = (1<<32)+val
-	while val>=0x80:
-		bits = val&0x7F
-		val >>= 7
-		total += struct.pack('B', (0x80|bits))
-	bits = val&0x7F
-	total += struct.pack('B', bits)
-	return total
+    total = b''
+    if val < 0:
+        val = (1 << 32) + val
+    while val >= 0x80:
+        bits = val & 0x7F
+        val >>= 7
+        total += struct.pack('B', (0x80 | bits))
+    bits = val & 0x7F
+    total += struct.pack('B', bits)
+    return total
 
 
 def _static_unpack_varint(data, return_num=False):
@@ -22,7 +23,7 @@ def _static_unpack_varint(data, return_num=False):
     val = 0x80
     n = 0
     while val & 0x80:
-        val = struct.unpack('B', data[n:n+1])[0]
+        val = struct.unpack('B', data[n:n + 1])[0]
         total |= ((val & 0x7F) << shift)
         shift += 7
         n += 1
@@ -34,16 +35,19 @@ def _static_unpack_varint(data, return_num=False):
         return total
 
 
-class _Packets:
+class packets:
     class Tools:
         @staticmethod
         def decode_uuid(data_packet):
+            length, n = _static_unpack_varint(data_packet, return_num=True)
+            print(length, "  ", n)
+            data_packet = data_packet[n:len(data_packet)]
+
             if len(data_packet) > 16:
                 data = data_packet[0:16]
             else:
                 data = data_packet
 
-            print(len(data))
             data = uuid.UUID(bytes=data)
             uuid_data = data.hex
             # a minecraft uuid is 8-4-4-4-12
@@ -53,52 +57,83 @@ class _Packets:
 
     class Decode:
         @staticmethod
+        def login_0x01(data_packet):
+            serverID_len, n = _static_unpack_varint(data_packet, return_num=True)
+            data_packet = data_packet[n:len(data_packet)]
+
+            serverID = data_packet[0:serverID_len]
+            data_packet = data_packet[0:serverID_len]
+
+            pubkeylen, n = _static_unpack_varint(data_packet, return_num=True)
+            data_packet = data_packet[0:n]
+
+            pubkey = data_packet[0:pubkeylen]
+            data_packet = data_packet[0:pubkeylen]
+
+            pubkey = base64.b64encode(pubkey)
+            pubkeyout = "-----BEGIN PUBLIC KEY-----\n"
+
+            n = 0
+            for i in list(pubkey):
+                if n == 64:
+                    pubkeyout += '\n'
+                pubkeyout += i
+                n += 1
+
+            pubkeyout += "\n-----END PUBLIC KEY-----"
+
+            tokenlen, n = _static_unpack_varint(data_packet, return_num=True)
+            data_packet = data_packet[0:n]
+
+            token = data_packet[0:tokenlen]
+            data_packet = data_packet[0:tokenlen]
+
+            return serverID, pubkey, token
+
+        @staticmethod
         def login_0x02(data_packet):
-            login_uuid, login_suc_bytes = _Packets.Tools.decode_uuid(data_packet)
-            login_suc_bytes = login_suc_bytes[1:len(login_suc_bytes)]
-            username = []
-            for i in range(len(login_suc_bytes)):
-                try:
-                    if login_suc_bytes[i:i+1].decode().isprintable():
-                        username.append(login_suc_bytes[i:i+1].decode())
-                    else:
-                        break
-                except Exception:
-                    pass
-            return login_uuid, ''.join(username), login_suc_bytes
+            login_uuid, data_packet = packets.Tools.decode_uuid(data_packet)
+
+            print(data_packet)
+            length, n = _static_unpack_varint(data_packet, return_num=True)
+            data_packet = data_packet[n:len(data_packet)]
+            username = data_packet[0:length].decode()
+
+            return login_uuid, username
 
         @staticmethod
         def login_0x03(data_packet):
+            print(data_packet)
             return _static_unpack_varint(data_packet)
-        
+
         @staticmethod
         def play_0x26(data_packet):
-            print(data_packet[0:20])
-            print('\n')
             out = []
+            print(data_packet[0:128])
             data = struct.unpack_from('i?Bc', data_packet)
             for i in data:
                 out.append(i)
-            rest = data_packet[8:len(data_packet)]  # would be 7, but there is a random \xff in there
+            rest = data_packet[8:len(data_packet)]
             dimention = _static_unpack_varint(rest)
+            print("\n", rest[0:1], '\n')
             rest = rest[1:len(rest)]
             dimentions = []
-            
+
             for i in range(dimention):
                 length = _static_unpack_varint(rest)
                 rest = rest[1:len(rest)]
                 mid = ''
-                data = struct.unpack_from('c'*length, rest)
-                
+                data = struct.unpack_from('c' * length, rest)
+
                 for i in data:
                     try:
                         mid += i.decode()
                     except UnicodeDecodeError:
                         print(i)
-                    
+
                 dimentions.append(mid)
                 rest = rest[length:len(rest)]
-                
+
             out.append(dimentions)
             out.append(rest[0:len(rest)])
             return out
@@ -108,65 +143,47 @@ class _Packets:
         def Encryption_Request(packet_data):
             packet_data = packet_data[20:len(packet_data)]
             length, num = _static_unpack_varint(packet_data, return_num=True)
-            
-            
+
         @staticmethod
         def custom_payload(packet_data):
-            
             return packet_data
-    class client:
+
+    class Client:
         @staticmethod
         def handshake(packet_data):
-            protocol_version, n = _static_unpack_varint(packet_data, return_num=True)
-            packet_data = packet_data[n:len(packet_data)]
+
+            protocol_version = struct.unpack_from("H", packet_data)[0]
+            packet_data = packet_data[2:len(packet_data)]
+
             if packet_data.endswith(b'\x01'):
+                return protocol_version, True
+            elif packet_data.endswith(b"\x02"):
                 return protocol_version, False
             else:
-                return protocol_version, True
+                return protocol_version, False
 
         @staticmethod
         def loginstart(packet_data):
-            username = []
-            for i in range(len(packet_data)):
-                try:
-                    if packet_data[i:i+1].decode().isprintable():
-                        username.append(packet_data[i:i+1].decode())
-                    else:
-                        break
-                except:
-                    pass
-            username = "".join(username)
-            packet_data = packet_data[len(username):len(packet_data)]
-            sig_data = struct.unpack_from('?', packet_data)
-            packet_data = packet_data[1:len(packet_data)]
-            if sig_data:
-                timestamp = struct.unpack_from('l', packet_data)
-                length = len(struct.pack('l', timestamp))
-                packet_data = packet_data[length:len(packet_data)]
-                pubkeylen, n = _static_unpack_varint(packet_data, return_num=True)
-                packet_data = packet_data[1:len(packet_data)]
-                pubkey = struct.unpack_from('c'*pubkeylen, packet_data)
-                packet_data = packet_data[pubkeylen:len(packet_data)]
-                signiturelen, n = _static_unpack_varint(packet_data, return_num=True)
-                packet_data = packet_data[1:len(packet_data)]
-                signiture = struct.unpack_from('c'*signiturelen, packet_data)
-                packet_data = packet_data[signiturelen:len(packet_data)]
+            print(packet_data)
+            length, n = _static_unpack_varint(packet_data, return_num=True)
+            packet_data = packet_data[n:len(packet_data)]
+            username = packet_data[0:length].decode()
+            packet_data = packet_data[length:len(packet_data)]
+
+            if packet_data != b'':
+                return {"username": username, "hasUUID": False}
 
             hasUUID = struct.unpack_from('?', packet_data)
             if hasUUID:
                 packet_data = packet_data[1:len(packet_data)]
-                puuid = _Packets.Tools.decode_uuid(packet_data)
-
-            if sig_data:
-                if hasUUID:
-                    return {"username": username, "sigdata": True, "timestamp": timestamp, "publickey": pubkey, "signiture": signiture, "hasUUID": True, "UUID": puuid}
-                else:
-                    return {"username": username, "sigdata": True, "timestamp": timestamp, "publickey": pubkey, "signiture": signiture, "hasUUID": False}
+                puuid = packets.Tools.decode_uuid(packet_data)
+                return {"username": username, "hasUUID": True, "UUID": puuid}
             else:
-                if hasUUID:
-                    return {"username": username, "sigdata": False, "hasUUID": True, "UUID": puuid}
-                else:
-                    return {"username": username, "sigdata": False, "hasUUID": False}
+                return {"username": username, "hasUUID": False}
+
+        @staticmethod
+        def setcompression(maxpaksize):
+            return b"\x03" + _static_pack_varint(maxpaksize)
 
         @staticmethod
         def disconnect(reason, bold=False, italic=False, underlined=False, strikethrough=False):
@@ -180,23 +197,5 @@ class _Packets:
                 "strikethrough": strikethrough
             }
 
-            packet += json.dumps(json_data)
-            packet = _static_pack_varint(len(packet)) + packet
+            packet += json.dumps(json_data).encode()
             return packet
-            
-                
-packet = {
-    "decode": {
-        "login": {
-            0x02: _Packets.Decode.login_0x02,
-            0x03: _Packets.Decode.login_0x03
-        },
-        "play": {
-            "custom payload": _Packets.Special.custom_payload,
-            0x26: _Packets.Decode.play_0x26
-        }
-    },
-    "encode": {
-
-    }
-}
